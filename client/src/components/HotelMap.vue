@@ -27,7 +27,7 @@ export default {
       });
 
       try {
-        const response = await fetch("http://localhost:3000/api/hotels");
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/hotels`);
         const hotels = await response.json();
 
         hotels.forEach(hotel => {

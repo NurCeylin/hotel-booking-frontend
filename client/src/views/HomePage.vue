@@ -67,7 +67,7 @@ const username = localStorage.getItem('username');
 
 const fetchHotels = async () => {
   try {
-    const res = await axios.get('http://localhost:3000/api/hotels');
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/hotels`);
     hotels.value = res.data;
   } catch (err) {
     console.error('Otel verileri alınamadı:', err);
@@ -77,7 +77,7 @@ const fetchHotels = async () => {
 const searchHotels = async () => {
   searched.value = true;
   try {
-    const res = await axios.get('http://localhost:3000/api/hotels/search', {
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/hotels/search`, {
       params: {
         city: city.value,
         date: checkInDate.value,

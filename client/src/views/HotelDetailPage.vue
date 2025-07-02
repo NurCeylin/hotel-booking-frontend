@@ -47,7 +47,7 @@ const route = useRoute();
 
 const loadHotel = async () => {
   try {
-    const res = await axios.get(`http://localhost:3000/api/hotels/${route.params.id}`);
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/hotels/${route.params.id}`);
     hotel.value = res.data;
   } catch (err) {
     console.error("Otel verisi alınamadı:", err);
@@ -58,7 +58,7 @@ const submitComment = async () => {
   if (!newComment.value.trim()) return;
 
   try {
-    const res = await axios.post(`http://localhost:3000/api/hotels/${route.params.id}/comments`, {
+    const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/hotels/${route.params.id}/comments`, {
       user: username,
       text: newComment.value
     });
