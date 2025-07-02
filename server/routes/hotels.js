@@ -22,7 +22,7 @@ router.get('/search', async (req, res) => {
       country: new RegExp(country, 'i')
     };
 
-    const hotels = await Hotel.find(query).sort({ rating: -1 });
+    const hotels = await Hotel.find(query);
     res.json(hotels);
   } catch (err) {
     console.error('Arama hatası:', err);
@@ -33,10 +33,13 @@ router.get('/search', async (req, res) => {
 // 3. Tek oteli getir
 router.get('/:id', async (req, res) => {
   try {
+    console.log('Aranan otel ID:', req.params.id);
     const hotel = await Hotel.findById(req.params.id);
+    console.log('Bulunan otel:', hotel);
     if (!hotel) return res.status(404).json({ error: 'Otel bulunamadı' });
     res.json(hotel);
   } catch (err) {
+    console.error('Otel getirme hatası:', err);
     res.status(500).json({ error: 'Sunucu hatası' });
   }
 });
@@ -54,7 +57,6 @@ router.post('/:id/comments', async (req, res) => {
 
     const newComment = { user, text };
     hotel.comments.push(newComment);
-    hotel.commentCount = hotel.comments.length;
 
     await hotel.save();
     res.status(201).json(newComment);

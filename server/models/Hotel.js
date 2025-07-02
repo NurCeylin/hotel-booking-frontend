@@ -9,14 +9,20 @@ const commentSchema = new mongoose.Schema({
 const hotelSchema = new mongoose.Schema({
   name: String,
   price: Number,
-  rating: Number,
-  commentCount: { type: Number, default: 0 },
   image: String,
   city: String,
   country: String,
   latitude: Number,
   longitude: Number,
-  comments: [commentSchema]  // ✅ Yorumlar burada tutuluyor
+  comments: [commentSchema],  // ✅ Yorumlar burada tutuluyor
+  discount: { type: Number, default: null }, // Yüzde cinsinden indirim
+  amenities: { 
+    type: [{
+      name: String,
+      score: Number
+    }], 
+    default: [] 
+  } // Otel özellikleri ve puanları
 });
 
 module.exports = mongoose.model('Hotel', hotelSchema);
