@@ -38,6 +38,12 @@ const upload = multer({
 router.post('/register', upload.single('photo'), async (req, res) => {
   const { name, email, password, country, city } = req.body;
 
+  // Şifre karmaşıklık kontrolü
+  const passwordRegex = /^(?=.*[0-9])(?=.*[^A-Za-z0-9])(?=.{8,})/;
+  if (!passwordRegex.test(password)) {
+    return res.status(400).json({ error: 'Şifre en az 8 karakter, 1 rakam ve 1 özel karakter içermelidir.' });
+  }
+
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     return res.status(400).json({ error: 'Bu e-posta ile zaten bir hesap mevcut.' });

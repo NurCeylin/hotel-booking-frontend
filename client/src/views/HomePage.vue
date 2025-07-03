@@ -45,7 +45,6 @@
               <strong>{{ hotel.price }} TL</strong><br />
               <small class="info-msg">Üye fiyatını görmek için giriş yapın</small>
             </p>
-            <button @click="showComments(hotel)">Yorumları Göster</button>
           </div>
         </div>
       </div>
@@ -72,7 +71,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, nextTick, watch } from 'vue';
 import axios from 'axios';
 import { Chart } from 'chart.js';
 import HotelMap from '../components/HotelMap.vue';
@@ -195,13 +194,55 @@ const drawServicesChart = (comments) => {
   });
 };
 
+const drawAmenitiesChart = (hotel) => {
+  if (!hotel.amenities || !hotel.amenities.length) return;
+  const ctx = document.getElementById('amenitiesChart-' + hotel._id);
+  if (!ctx) return;
+  // Eğer daha önce çizilmişse yok et
+  if (ctx._chart) {
+    ctx._chart.destroy();
+  }
+  ctx._chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: hotel.amenities.map(a => a.name),
+      datasets: [{
+        label: 'Puan',
+        data: hotel.amenities.map(a => a.score),
+        backgroundColor: '#e61e38',
+        borderRadius: 8,
+        barThickness: 18
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      scales: {
+        x: {
+          min: 0,
+          max: 10
+        }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+};
+
 const toggleMenu = () => {
   menuOpen.value = !menuOpen.value;
 };
 
-onMounted(() => {
+onMounted(async () => {
   checkLogin();
-  fetchHotels();
+  await fetchHotels();
+  await nextTick();
+  hotels.value.forEach(hotel => drawAmenitiesChart(hotel));
+});
+
+watch(hotels, async (newHotels) => {
+  await nextTick();
+  newHotels.forEach(hotel => drawAmenitiesChart(hotel));
 });
 </script>
 

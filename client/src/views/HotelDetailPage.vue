@@ -13,11 +13,9 @@
     </div>
     <div v-if="hotel.amenities && hotel.amenities.length">
       <h3>Otel Özellikleri</h3>
-      <ul class="amenities-list">
-        <li v-for="(amenity, i) in hotel.amenities" :key="i">
-          {{ amenity.name }} - {{ amenity.score }}/10
-        </li>
-      </ul>
+      <div class="amenities-chart-container">
+        <canvas ref="amenitiesChart"></canvas>
+      </div>
     </div>
 
     <div v-if="hotel.latitude && hotel.longitude" class="hotel-map-detail">
@@ -75,6 +73,7 @@ const username = localStorage.getItem('username');
 const route = useRoute();
 const showGraph = ref(false);
 const serviceChart = ref(null);
+const amenitiesChart = ref(null);
 
 const loadHotel = async () => {
   try {
@@ -175,7 +174,43 @@ function drawServiceGraph() {
   });
 }
 
-onMounted(loadHotel);
+function drawAmenitiesChart() {
+  if (!hotel.value || !hotel.value.amenities || !hotel.value.amenities.length) return;
+  const ctx = amenitiesChart.value;
+  if (!ctx) return;
+  if (ctx._chart) ctx._chart.destroy();
+  ctx._chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: hotel.value.amenities.map(a => a.name),
+      datasets: [{
+        label: 'Puan',
+        data: hotel.value.amenities.map(a => a.score),
+        backgroundColor: '#e61e38',
+        borderRadius: 8,
+        barThickness: 18
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      scales: {
+        x: {
+          min: 0,
+          max: 10
+        }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+}
+
+onMounted(async () => {
+  await loadHotel();
+  await nextTick();
+  drawAmenitiesChart();
+});
 </script>
 
 <style scoped>
@@ -262,5 +297,8 @@ button {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+}
+.amenities-chart-container {
+  margin-bottom: 1rem;
 }
 </style>
