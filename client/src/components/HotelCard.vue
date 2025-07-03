@@ -3,8 +3,7 @@
     <img :src="hotel.image" alt="Hotel Image" />
     <h3>{{ hotel.name }}</h3>
     <p>Fiyat: {{ hotel.price }}₺</p>
-    <p>Puan: {{ hotel.rating }} ⭐</p>
-    <p>Yorum Sayısı: {{ hotel.commentCount }}</p>
+    <p v-if="hotel.comments && hotel.comments.length">{{ hotel.comments.length }} yorum</p>
     <button @click="goToDetail">Detay</button>
   </div>
 </template>

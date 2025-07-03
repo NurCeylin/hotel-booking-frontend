@@ -2,15 +2,42 @@
   <div v-if="hotel" class="hotel-detail">
     <h2>{{ hotel.name }}</h2>
     <img :src="hotel.image" alt="Otel Resmi" class="hotel-image" />
-    <p><strong>Fiyat:</strong> {{ hotel.price }} TL</p>
-    <p><strong>Puan:</strong> {{ hotel.rating }} ⭐</p>
-    <p><strong>Yorum Sayısı:</strong> {{ hotel.commentCount }}</p>
+    <div class="price-row">
+      <span v-if="hotel.discount !== null && hotel.discount !== undefined">
+        <s>{{ hotel.price }} TL</s>
+        <strong class="discounted-price">{{ calculateDiscountWithDiscount(hotel.price, hotel.discount) }} TL</strong>
+      </span>
+      <span v-else>
+        <strong>{{ hotel.price }} TL</strong>
+      </span>
+    </div>
+    <div v-if="hotel.amenities && hotel.amenities.length">
+      <h3>Otel Özellikleri</h3>
+      <ul class="amenities-list">
+        <li v-for="(amenity, i) in hotel.amenities" :key="i">
+          {{ amenity.name }} - {{ amenity.score }}/10
+        </li>
+      </ul>
+    </div>
+
+    <div v-if="hotel.latitude && hotel.longitude" class="hotel-map-detail">
+      <HotelMapSingle :lat="hotel.latitude" :lng="hotel.longitude" :name="hotel.name" />
+    </div>
 
     <div v-if="hotel.comments?.length">
-      <h3>Yorumlar</h3>
+      <h3 class="comments-title" @click="toggleGraph">Yorumlar
+        <span class="show-graph-btn">{{ showGraph ? '▲' : '▼' }}</span>
+      </h3>
+      <div v-if="showGraph" class="service-graph">
+        <canvas ref="serviceChart"></canvas>
+      </div>
       <ul>
         <li v-for="(comment, index) in hotel.comments" :key="index">
-          <strong>{{ comment.user }}:</strong> {{ comment.text }}
+          <strong>{{ comment.user }}</strong> -
+          <span class="comment-date">{{ formatDate(comment.date) }}</span>
+          <span v-if="comment.rating">- {{ comment.rating }}/10</span>
+          <br />
+          {{ comment.text }}
         </li>
       </ul>
     </div>
@@ -36,21 +63,28 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
+import HotelMapSingle from '../components/HotelMapSingle.vue';
+import { Chart } from 'chart.js/auto';
 
 const hotel = ref(null);
 const newComment = ref('');
 const username = localStorage.getItem('username');
 const route = useRoute();
+const showGraph = ref(false);
+const serviceChart = ref(null);
 
 const loadHotel = async () => {
   try {
+    console.log('Otel ID:', route.params.id);
     const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/hotels/${route.params.id}`);
+    console.log('API Response:', res.data);
     hotel.value = res.data;
   } catch (err) {
     console.error("Otel verisi alınamadı:", err);
+    console.error("Hata detayı:", err.response?.data);
   }
 };
 
@@ -71,12 +105,82 @@ const submitComment = async () => {
   }
 };
 
+const calculateDiscountWithDiscount = (price, discount) => {
+  if (discount !== null && discount !== undefined) {
+    return Math.round(price * (1 - discount / 100));
+  }
+  return price;
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });
+};
+
+const toggleGraph = async () => {
+  showGraph.value = !showGraph.value;
+  if (showGraph.value) {
+    await nextTick();
+    drawServiceGraph();
+  }
+};
+
+function drawServiceGraph() {
+  if (!hotel.value.comments?.length) return;
+  // Servis puanlarını topla (örnek: temizlik, konum, hizmet, olanaklar, çevre)
+  const services = ['Temizlik', 'Personel ve servis', 'İmkan ve özellikler', 'Konaklama yeri', 'Çevre dostluğu'];
+  const keys = ['cleanliness', 'service', 'amenities', 'location', 'environment'];
+  const sums = [0, 0, 0, 0, 0];
+  let count = 0;
+  hotel.value.comments.forEach(c => {
+    if (c.ratings) {
+      keys.forEach((k, i) => {
+        if (typeof c.ratings[k] === 'number') {
+          sums[i] += c.ratings[k];
+        }
+      });
+      count++;
+    }
+  });
+  const avgs = sums.map(s => count ? (s / count).toFixed(1) : 0);
+  if (serviceChart.value && serviceChart.value._chart) {
+    serviceChart.value._chart.destroy();
+  }
+  const ctx = serviceChart.value.getContext('2d');
+  serviceChart.value._chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: services,
+      datasets: [{
+        label: 'Servis Puanı',
+        data: avgs,
+        backgroundColor: '#2c3e50',
+        borderRadius: 8,
+        barThickness: 24
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      scales: {
+        x: {
+          min: 0,
+          max: 10
+        }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+}
+
 onMounted(loadHotel);
 </script>
 
 <style scoped>
 .hotel-detail {
-  max-width: 600px;
+  max-width: 700px;
   margin: 2rem auto;
   padding: 1rem;
   background: #f9f9f9;
@@ -88,6 +192,58 @@ onMounted(loadHotel);
   height: auto;
   margin-bottom: 1rem;
   border-radius: 4px;
+}
+.price-row {
+  font-size: 1.3rem;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.discounted-price {
+  color: #e61e38;
+  font-weight: bold;
+  font-size: 1.4rem;
+  margin-left: 8px;
+}
+.amenities-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 0 0 16px 0;
+  padding: 0;
+  list-style: none;
+}
+.amenities-list li {
+  background: #f7f7f7;
+  color: #e61e38;
+  border-radius: 8px;
+  padding: 6px 16px;
+  font-size: 1rem;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(230,30,56,0.06);
+}
+.hotel-map-detail {
+  margin: 18px 0 24px 0;
+}
+.comments-title {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.show-graph-btn {
+  font-size: 1.2rem;
+  color: #e61e38;
+}
+.service-graph {
+  margin: 12px 0 18px 0;
+}
+.comment-date {
+  color: #888;
+  font-size: 0.95rem;
+  margin-left: 4px;
 }
 .comment-form {
   margin-top: 1rem;
