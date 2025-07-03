@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const Hotel = require('../models/Hotel');
 
 // 📁 'uploads' klasörü yoksa oluştur
 const uploadDir = path.join(__dirname, '../uploads');
@@ -63,6 +64,9 @@ router.post('/register', upload.single('photo'), async (req, res) => {
     });
 
     res.status(201).json({ message: 'Kayıt başarılı' });
+    localStorage.setItem('username', newUser.name);
+    localStorage.setItem('photo', newUser.photo);
+    window.dispatchEvent(new Event('storage'));
   } catch (err) {
     console.error("Kayıt sırasında hata:", err);
     res.status(400).json({ error: 'Kayıt başarısız', message: err.message });
@@ -87,6 +91,9 @@ router.post('/login', async (req, res) => {
     );
 
     res.json({ token, name: user.name, photo: user.photo || '' });
+    localStorage.setItem('username', user.name);
+    localStorage.setItem('photo', user.photo || '');
+    window.dispatchEvent(new Event('storage'));
   } catch (err) {
     console.error("Giriş sırasında hata:", err);
     res.status(500).json({ error: 'Giriş başarısız', message: err.message });
@@ -101,6 +108,39 @@ router.get('/users', async (req, res) => {
   } catch (err) {
     console.error("Kullanıcıları alma hatası:", err);
     res.status(500).json({ error: 'Kullanıcılar alınamadı', message: err.message });
+  }
+});
+
+router.get('/search', async (req, res) => {
+  try {
+    const { city, country, date } = req.query;
+
+    let searchDates = [];
+    if (date) {
+      searchDates = [date];
+    } else {
+      // Yaklaşan hafta sonu
+      const today = new Date();
+      const day = today.getDay();
+      const daysToFriday = (5 - day + 7) % 7;
+      const friday = new Date(today);
+      friday.setDate(today.getDate() + daysToFriday);
+      const saturday = new Date(friday); saturday.setDate(friday.getDate() + 1);
+      const sunday = new Date(friday); sunday.setDate(friday.getDate() + 2);
+      searchDates = [friday, saturday, sunday].map(d => d.toISOString().slice(0,10));
+    }
+
+    const query = {
+      country: new RegExp(country, 'i'),
+      ...(city ? { city: new RegExp(city, 'i') } : {}),
+      availability: { $in: searchDates }
+    };
+
+    const hotels = await Hotel.find(query).sort({ points: -1 }).limit(3);
+    res.json(hotels);
+  } catch (err) {
+    console.error('Arama hatası:', err);
+    res.status(500).json({ error: 'Arama sırasında hata oluştu' });
   }
 });
 

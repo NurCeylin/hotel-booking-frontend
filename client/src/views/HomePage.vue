@@ -27,6 +27,7 @@
                 {{ hotel.name }}
               </router-link>
             </h3>
+            <p v-if="hotel.points !== undefined">Puan: {{ hotel.points }}</p>
             <p v-if="hotel.comments && hotel.comments.length">{{ hotel.comments.length }} yorum</p>
             <div v-if="username" class="discount-badge-inline">
               %{{ hotel.discount !== null && hotel.discount !== undefined ? hotel.discount : 10 }} indirim
@@ -62,7 +63,6 @@
       <canvas id="servicesChart"></canvas>
     </div>
   </div>
-  <img v-if="photoUrl" :src="photoUrl" alt="Profil Fotoğrafı" class="profile-photo" />
   <button class="hamburger" :class="{ open: menuOpen }" @click="toggleMenu" aria-label="Menüyü Aç/Kapat">
     <span :class="{'bar': true, 'open': menuOpen}"></span>
     <span :class="{'bar': true, 'open': menuOpen}"></span>
@@ -86,6 +86,7 @@ const guests = ref(1);
 const searched = ref(false);
 const username = ref('');
 const photo = ref('');
+const country = ref('');
 const router = useRouter();
 const menuOpen = ref(false);
 
@@ -100,12 +101,13 @@ const photoUrl = computed(() =>
 const checkLogin = () => {
   username.value = localStorage.getItem('username') || '';
   photo.value = localStorage.getItem('photo') || '';
+  country.value = localStorage.getItem('country') || 'turkey';
 };
 
 const fetchHotels = async () => {
   try {
     const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/hotels`);
-    hotels.value = res.data;
+    hotels.value = res.data.sort((a, b) => (b.points || 0) - (a.points || 0));
   } catch (err) {
     console.error('Otel verileri alınamadı:', err);
   }
@@ -117,10 +119,11 @@ const searchHotels = async () => {
     const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/hotels/search`, {
       params: {
         city: city.value,
-        country: "Turkey"
+        country: country.value,
+        date: checkIn.value
       }
     });
-    hotels.value = res.data;
+    hotels.value = res.data.sort((a, b) => (b.points || 0) - (a.points || 0));
   } catch (err) {
     hotels.value = [];
     console.error('Arama sırasında hata:', err);
@@ -451,15 +454,15 @@ watch(hotels, async (newHotels) => {
 @media (max-width: 700px) {
   .nav,
   .nav.open {
-    background: #e3e8f7 !important;
+    background: none !important;
   }
   .hamburger.open {
-    background: #e3e8f7 !important;
+    background: none !important;
     border-radius: 8px;
   }
 }
 .hamburger.open {
-  background: #e3e8f7 !important;
+  background: none !important;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }

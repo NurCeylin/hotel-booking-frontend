@@ -22,7 +22,9 @@ const hotelSchema = new mongoose.Schema({
       score: Number
     }], 
     default: [] 
-  } // Otel özellikleri ve puanları
+  }, // Otel özellikleri ve puanları
+  availability: { type: [String], default: [] }, // Müsaitlik tarihleri (YYYY-MM-DD)
+  points: { type: Number, default: 0 } // Otel puanı (sıralama için)
 });
 
 module.exports = mongoose.model('Hotel', hotelSchema);

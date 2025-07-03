@@ -15,14 +15,30 @@ router.get('/', async (req, res) => {
 // 2. Otel arama (şehir + ülke)
 router.get('/search', async (req, res) => {
   try {
-    const { city, date, guests, country } = req.query;
+    const { city, country, date } = req.query;
+
+    let searchDates = [];
+    if (date) {
+      searchDates = [date];
+    } else {
+      // Yaklaşan hafta sonu
+      const today = new Date();
+      const day = today.getDay();
+      const daysToFriday = (5 - day + 7) % 7;
+      const friday = new Date(today);
+      friday.setDate(today.getDate() + daysToFriday);
+      const saturday = new Date(friday); saturday.setDate(friday.getDate() + 1);
+      const sunday = new Date(friday); sunday.setDate(friday.getDate() + 2);
+      searchDates = [friday, saturday, sunday].map(d => d.toISOString().slice(0,10));
+    }
 
     const query = {
-      city: new RegExp(city, 'i'),
-      country: new RegExp(country, 'i')
+      country: new RegExp(country, 'i'),
+      ...(city ? { city: new RegExp(city, 'i') } : {}),
+      availability: { $in: searchDates }
     };
 
-    const hotels = await Hotel.find(query);
+    const hotels = await Hotel.find(query).sort({ points: -1 }).limit(3);
     res.json(hotels);
   } catch (err) {
     console.error('Arama hatası:', err);
